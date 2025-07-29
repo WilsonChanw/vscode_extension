@@ -3,7 +3,7 @@
   "displayName": "SystemVerilog State Machine Generator",
   "description": "Generate state machines for SystemVerilog",
   "version": "1.0.0",
-  "publisher": "wilson_ch001",
+  "publisher": "wilsonch001",
   "engines": {
     "vscode": "^1.85.0"
   },
