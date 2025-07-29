@@ -53,3 +53,6 @@ typedef struct packed {
 ---
 
 感谢使用 SystemVerilog 状态机生成器！🎉
+
+## License
+MIT License
