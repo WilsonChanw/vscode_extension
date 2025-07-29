@@ -2,13 +2,20 @@
   "name": "sv-statemachine-generator",
   "displayName": "SystemVerilog State Machine Generator",
   "description": "Generate state machines for SystemVerilog",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "publisher": "wilsonch001",
   "engines": {
     "vscode": "^1.85.0"
   },
   "categories": [
     "Snippets"
+  ],
+  "keywords": [
+    "SystemVerilog",
+    "State Machine",
+    "Hardware Design",
+    "Code Generation",
+    "FSM"
   ],
   "icon": "images/icon.png",
   "activationEvents": [
