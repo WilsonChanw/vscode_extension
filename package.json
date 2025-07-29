@@ -1,0 +1,54 @@
+{
+  "name": "sv-statemachine-generator",
+  "displayName": "SystemVerilog State Machine Generator",
+  "description": "Generate state machines for SystemVerilog",
+  "version": "1.0.0",
+  "publisher": "wilson_ch001",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Snippets"
+  ],
+  "icon": "images/icon.png",
+  "activationEvents": [
+    "onCommand:sv-statemachine.generate"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "sv-statemachine.generate",
+        "title": "Generate SystemVerilog State Machine",
+        "category": "SystemVerilog"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "sv-statemachine.generate",
+          "group": "SV Generation",
+          "when": "editorLangId == systemverilog"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "sv-statemachine.generate",
+          "group": "SV Generation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "esbuild src/extension.ts --bundle --minify --platform=node --outfile=out/extension.js --external:vscode --format=cjs --target=node18 --sourcemap",
+    "watch": "esbuild src/extension.ts --bundle --minify --platform=node --outfile=out/extension.js --external:vscode --format=cjs --target=node18 --sourcemap --watch",
+    "lint": "eslint . --ext .ts,.tsx"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.24",
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.20.2",
+    "typescript": "^5.2.2"
+  }
+}
