@@ -1,141 +1,86 @@
 import * as vscode from 'vscode';
 
 export function activate(context: vscode.ExtensionContext) {
-    // Register Fast State Machine Generation Command
-    const fastDisposable = vscode.commands.registerCommand('sv-statemachine.generate', async () => {
+    // 注册快速状态机生成命令
+    const fastDisposable = vscode.commands.registerCommand('sv-statemachine.generate-fast', async () => {
         try {
-            // Get state names from user
-            const stateInput = await vscode.window.showInputBox({
-                prompt: 'Enter state names (separated by semicolon; e.g., IDLE;CONDITION;FSM_END)',
-                placeHolder: 'Example: RESET;IDLE;PROCESS;FINISH',
-                validateInput: value => {
-                    if (!value || value.trim() === '') {
-                        return 'Please enter at least two state names';
-                    }
-                    
-                    const states = value.split(';').map(s => s.trim()).filter(s => s !== '');
-                    
-                    if (states.length < 2) {
-                        return 'Please enter at least two state names';
-                    }
-                    
-                    // Validate state names
-                    const invalidNames = states.filter(name => !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name));
-                    if (invalidNames.length > 0) {
-                        return `Invalid state names: ${invalidNames.join(', ')}`;
-                    }
-                    
-                    return null;
-                }
-            });
+            const editor = vscode.window.activeTextEditor;
+            if (!editor) {
+                vscode.window.showErrorMessage('No active editor found');
+                return;
+            }
             
-            // User canceled input
-            if (!stateInput) return;
+            const selection = editor.selection;
+            const selectedText = editor.document.getText(selection);
             
-            // Parse state names
-            const states = stateInput.split(';')
+            if (!selectedText) {
+                vscode.window.showErrorMessage('Please select state names (semicolon separated)');
+                return;
+            }
+            
+            // 解析状态名称
+            const states = selectedText.split(';')
                 .map(state => state.trim())
                 .filter(state => state !== '');
             
-            // Generate state machine code (Fast Mode)
-            const fsmCode = generateFastStateMachineCode(states);
-            
-            // Get active editor
-            const editor = vscode.window.activeTextEditor;
-            
-            if (editor) {
-                // Insert code at current position
-                await editor.edit(editBuilder => {
-                    const position = editor.selection.active;
-                    editBuilder.insert(position, fsmCode);
-                });
-                vscode.window.showInformationMessage('State machine code inserted');
-            } else {
-                // Create new document if no active editor
-                const doc = await vscode.workspace.openTextDocument({
-                    content: fsmCode,
-                    language: 'systemverilog'
-                });
-                await vscode.window.showTextDocument(doc);
-                vscode.window.showInformationMessage('State machine code generated');
+            if (states.length < 2) {
+                vscode.window.showErrorMessage('Please select at least two state names');
+                return;
             }
+            
+            // 生成状态机代码
+            const generatedCode = generateFastStateMachineCode(states);
+            
+            // 替换选中的文本
+            await editor.edit(editBuilder => {
+                editBuilder.replace(selection, generatedCode);
+            });
+            
+            vscode.window.showInformationMessage('Fast state machine generated');
         } catch (error: any) {
             handleError(error);
         }
     });
 
-    // Register Advanced State Machine Generation Command
+    // 注册高级状态机生成命令
     const advancedDisposable = vscode.commands.registerCommand('sv-statemachine.generate-advanced', async () => {
         try {
-            // Get state names from user
-            const stateInput = await vscode.window.showInputBox({
-                prompt: 'Enter state names (separated by semicolon; e.g., IDLE;CON1;FSM_END)',
-                validateInput: value => {
-                    if (!value || value.trim() === '') {
-                        return 'Please enter at least two state names';
-                    }
-                    
-                    const states = value.split(';').map(s => s.trim()).filter(s => s !== '');
-                    
-                    if (states.length < 2) {
-                        return 'Please enter at least two state names';
-                    }
-                    
-                    // Validate state names
-                    const invalidNames = states.filter(name => !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name));
-                    if (invalidNames.length > 0) {
-                        return `Invalid state names: ${invalidNames.join(', ')}`;
-                    }
-                    
-                    return null;
-                }
-            });
-            
-            // User canceled input
-            if (!stateInput) return;
-            
-            // Parse state names
-            const states = stateInput.split(';')
-                .map(state => state.trim())
-                .filter(state => state !== '');
-            
-            // Show state mapping
-            const stateMap = states.map((s, i) => `${i+1} = ${s}`).join(', ');
-            vscode.window.showInformationMessage(`State mapping: ${stateMap}`);
-            
-            // Get transition definitions
-            const transitionInput = await vscode.window.showInputBox({
-                prompt: `Define state transitions (format: source-target; state numbers: ${stateMap})`,
-                placeHolder: 'Example: 1-2;2-3;2-1;3-1',
-                validateInput: value => validateTransitionInput(value, states.length)
-            });
-            
-            if (!transitionInput) return;
-            
-            const transitions = parseTransitions(transitionInput, states);
-            
-            // Generate advanced state machine code
-            const code = generateAdvancedStateMachineCode(states, transitions);
-            
-            // Get active editor
             const editor = vscode.window.activeTextEditor;
-            
-            if (editor) {
-                // Insert code at current position
-                await editor.edit(editBuilder => {
-                    const position = editor.selection.active;
-                    editBuilder.insert(position, code);
-                });
-                vscode.window.showInformationMessage('Advanced state machine code inserted');
-            } else {
-                // Create new document if no active editor
-                const doc = await vscode.workspace.openTextDocument({
-                    content: code,
-                    language: 'systemverilog'
-                });
-                await vscode.window.showTextDocument(doc);
-                vscode.window.showInformationMessage('Advanced state machine code generated');
+            if (!editor) {
+                vscode.window.showErrorMessage('No active editor found');
+                return;
             }
+            
+            const selection = editor.selection;
+            const selectedText = editor.document.getText(selection);
+            
+            if (!selectedText) {
+                vscode.window.showErrorMessage('Please select state definitions');
+                return;
+            }
+            
+            // 解析状态定义
+            const lines = selectedText.split('\n')
+                .map(line => line.trim())
+                .filter(line => line !== '');
+            
+            if (lines.length === 0) {
+                vscode.window.showErrorMessage('No valid state definitions found');
+                return;
+            }
+            
+            // 解析状态和转移关系
+            const { states, transitions } = parseAdvancedStateDefinition(lines);
+            
+            // 生成状态机代码
+            const generatedCode = generateAdvancedStateMachineCode(states, transitions);
+            
+            // 替换选中的文本
+            await editor.edit(editBuilder => {
+                editBuilder.replace(selection, generatedCode);
+            });
+            
+            vscode.window.showInformationMessage('Advanced state machine generated');
         } catch (error: any) {
             handleError(error);
         }
@@ -145,13 +90,13 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 // ========================
-// Fast Mode State Machine Generation
+// 快速模式状态机生成
 // ========================
 function generateFastStateMachineCode(states: string[]): string {
-    // Generate state enumeration definition
+    // 生成状态枚举定义
     const enumDefinition = states.join(',\n    ');
     
-    // Generate transition flags
+    // 生成转移标志
     const transitionFlags = states.map((state, index) => {
         const nextIndex = (index + 1) % states.length;
         const currentLower = state.toLowerCase();
@@ -159,7 +104,7 @@ function generateFastStateMachineCode(states: string[]): string {
         return `logic ${currentLower}2${nextLower};`;
     }).join('\n    ');
     
-    // Generate transition condition logic
+    // 生成转移条件逻辑
     const transitionLogic = states.map((state, index) => {
         const nextIndex = (index + 1) % states.length;
         const currentLower = state.toLowerCase();
@@ -169,7 +114,7 @@ function generateFastStateMachineCode(states: string[]): string {
         end`;
     }).join('\n        ');
     
-    // Generate state transition logic
+    // 生成状态转移逻辑
     const stateTransition = states.map((state, index) => {
         const nextIndex = (index + 1) % states.length;
         const currentLower = state.toLowerCase();
@@ -183,7 +128,7 @@ function generateFastStateMachineCode(states: string[]): string {
     const now = new Date();
     const timestamp = `${now.getFullYear()}/${(now.getMonth()+1).toString().padStart(2, '0')}/${now.getDate().toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
     
-    let code = `
+    return `
 
 // State encoding definition
 typedef enum {      
@@ -228,78 +173,94 @@ always_ff @(posedge clk or negedge rst_n) begin : state_register
 end
 
 `;
-
-    return code;
 }
 
 // ========================
-// Advanced Mode Helper Functions
+// 高级模式解析函数
 // ========================
-
-// Validate transition input
-function validateTransitionInput(value: string, stateCount: number): string | null {
-    if (!value || value.trim() === '') return 'Please enter at least one transition';
+function parseAdvancedStateDefinition(lines: string[]): {
+    states: string[],
+    transitions: {source: string, target: string}[]
+} {
+    const states: string[] = [];
+    const transitions: {source: string, target: string}[] = [];
     
-    const transitions = value.split(';').map(t => t.trim()).filter(t => t !== '');
-    
-    for (const trans of transitions) {
-        // Support multi-digit state numbers
-        if (!/^\d+\-\d+$/.test(trans)) {
-            return `Invalid transition format: ${trans}. Use format: source-target`;
-        }
-        
-        const [sourceStr, targetStr] = trans.split('-');
-        const source = parseInt(sourceStr);
-        const target = parseInt(targetStr);
-        
-        if (isNaN(source) || isNaN(target)) {
-            return `Invalid state number: ${trans}. Must be numeric`;
-        }
-        
-        if (source < 1 || source > stateCount || target < 1 || target > stateCount) {
-            return `Invalid state number: ${trans}. Valid range: 1-${stateCount}`;
+    // 第一遍：收集所有状态
+    for (const line of lines) {
+        const parts = line.split(';').map(p => p.trim()).filter(p => p);
+        if (parts.length > 0) {
+            states.push(parts[0]);
         }
     }
     
-    return null;
-}
-
-// Parse transitions
-function parseTransitions(input: string, states: string[]): {source: number, target: number}[] {
-    return input.split(';')
-        .map(t => t.trim())
-        .filter(t => t !== '')
-        .map(t => {
-            const [sourceStr, targetStr] = t.split('-');
-            const source = parseInt(sourceStr);
-            const target = parseInt(targetStr);
-            return {source, target};
-        });
+    // 第二遍：解析转移关系
+    for (const line of lines) {
+        const parts = line.split(';').map(p => p.trim()).filter(p => p);
+        if (parts.length < 2) continue;
+        
+        const sourceState = parts[0];
+        const sourceIndex = states.indexOf(sourceState) + 1;
+        
+        if (sourceIndex === 0) {
+            throw new Error(`State not found: ${sourceState}`);
+        }
+        
+        for (let i = 1; i < parts.length; i++) {
+            const transitionPart = parts[i];
+            const [sourceIndexStr, targetIndexStr] = transitionPart.split('-');
+            
+            if (!sourceIndexStr || !targetIndexStr) {
+                throw new Error(`Invalid transition format: ${transitionPart}`);
+            }
+            
+            // 支持多位数状态索引
+            const sourceIdx = parseInt(sourceIndexStr);
+            const targetIdx = parseInt(targetIndexStr);
+            
+            if (isNaN(sourceIdx) || isNaN(targetIdx)) {
+                throw new Error(`Invalid transition numbers: ${transitionPart}`);
+            }
+            
+            // 验证源索引匹配
+            if (sourceIdx !== sourceIndex) {
+                throw new Error(`Source index mismatch: ${sourceIdx} should be ${sourceIndex} for ${sourceState}`);
+            }
+            
+            if (targetIdx < 1 || targetIdx > states.length) {
+                throw new Error(`Target index out of range: ${targetIdx}. Valid range: 1-${states.length}`);
+            }
+            
+            const targetState = states[targetIdx - 1];
+            transitions.push({
+                source: sourceState,
+                target: targetState
+            });
+        }
+    }
+    
+    return { states, transitions };
 }
 
 // ========================
-// Advanced Mode State Machine Generation
+// 高级模式状态机生成
 // ========================
 function generateAdvancedStateMachineCode(
     states: string[],
-    transitions: {source: number, target: number}[]
+    transitions: {source: string, target: string}[]
 ): string {
-    // Generate state enumeration definition
+    // 生成状态枚举定义
     const enumDefinition = states.join(',\n    ');
     
-    // Generate transition flags
+    // 生成转移标志
     const transitionFlags = transitions.map(({source, target}) => {
-        const sourceState = states[source - 1];
-        const targetState = states[target - 1];
-        const sourceLower = sourceState.toLowerCase();
-        const targetLower = targetState.toLowerCase();
+        const sourceLower = source.toLowerCase();
+        const targetLower = target.toLowerCase();
         return `logic ${sourceLower}2${targetLower};`;
     }).join('\n    ');
     
-    // Generate transition condition logic
-    const transitionLogic = states.map((state, index) => {
-        const stateIndex = index + 1;
-        const stateTransitions = transitions.filter(t => t.source === stateIndex);
+    // 生成转移条件逻辑
+    const transitionLogic = states.map(state => {
+        const stateTransitions = transitions.filter(t => t.source === state);
         
         if (stateTransitions.length === 0) {
             return `${state}: begin
@@ -309,19 +270,16 @@ function generateAdvancedStateMachineCode(
         
         return `${state}: begin
             ${stateTransitions.map(({source, target}) => {
-                const sourceState = states[source - 1];
-                const targetState = states[target - 1];
-                const sourceLower = sourceState.toLowerCase();
-                const targetLower = targetState.toLowerCase();
+                const sourceLower = source.toLowerCase();
+                const targetLower = target.toLowerCase();
                 return `trans_flags.${sourceLower}2${targetLower} = ...; `;
             }).join('\n            ')}
         end`;
     }).join('\n        ');
     
-    // Generate state transition logic (using if-else if structure)
-    const stateTransition = states.map((state, index) => {
-        const stateIndex = index + 1;
-        const stateTransitions = transitions.filter(t => t.source === stateIndex);
+    // 生成状态转移逻辑（使用if-else if结构）
+    const stateTransition = states.map(state => {
+        const stateTransitions = transitions.filter(t => t.source === state);
         
         if (stateTransitions.length === 0) {
             return `${state}: begin
@@ -329,21 +287,19 @@ function generateAdvancedStateMachineCode(
             end`;
         }
         
-        // Generate if-else if chain
+        // 生成if-else if链
         let ifChain = '';
         stateTransitions.forEach(({source, target}, i) => {
-            const sourceState = states[source - 1];
-            const targetState = states[target - 1];
-            const sourceLower = sourceState.toLowerCase();
-            const targetLower = targetState.toLowerCase();
+            const sourceLower = source.toLowerCase();
+            const targetLower = target.toLowerCase();
             
             if (i === 0) {
                 ifChain += `if (trans_flags.${sourceLower}2${targetLower})
-                next_state = ${targetState};`;
+                next_state = ${target};`;
             } else {
                 ifChain += `
             else if (trans_flags.${sourceLower}2${targetLower})
-                next_state = ${targetState};`;
+                next_state = ${target};`;
             }
         });
         
@@ -355,8 +311,13 @@ function generateAdvancedStateMachineCode(
     const now = new Date();
     const timestamp = `${now.getFullYear()}/${(now.getMonth()+1).toString().padStart(2, '0')}/${now.getDate().toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
     
-    // Generate state mapping table
+    // 生成状态映射表
     const stateMapping = states.map((s, i) => `${i+1}: ${s}`).join('\n// ');
+    
+    // 生成转移关系描述
+    const transitionDescription = transitions.map(t => 
+        `${t.source} → ${t.target}`
+    ).join('\n// ');
     
     return `
 
@@ -365,7 +326,7 @@ typedef enum {
     ${enumDefinition}
 } fsm_state;
 
-// Packed struct definition 
+// Packed struct definition (transition flags)
 typedef struct packed {
     ${transitionFlags}
 } fsm_transition_flags;
@@ -394,7 +355,7 @@ always_comb begin : state_transition
     endcase
 end
 
-// State register 
+// State register (sequential logic)
 always_ff @(posedge clk or negedge rst_n) begin : state_register
     if (!rst_n) begin
         cur_state <= ${states[0]}; // Reset initialization
@@ -403,11 +364,10 @@ always_ff @(posedge clk or negedge rst_n) begin : state_register
     end
 end
 
-
 `;
 }
 
-// Error handling function
+// 错误处理函数
 function handleError(error: any) {
     let errorMessage = 'Unknown error';
     if (error instanceof Error) {
@@ -415,7 +375,7 @@ function handleError(error: any) {
     } else if (typeof error === 'string') {
         errorMessage = error;
     }
-    vscode.window.showErrorMessage(`Operation failed: ${errorMessage}`);
+    vscode.window.showErrorMessage(`Failed to generate state machine: ${errorMessage}`);
 }
 
 export function deactivate() {}

@@ -1,8 +1,8 @@
 {
   "name": "sv-statemachine-generator",
   "displayName": "SystemVerilog State Machine Generator",
-  "description": "Generate state machines for SystemVerilog",
-  "version": "2.0.0",
+  "description": "Generate state machines for SystemVerilog based on selected text",
+  "version": "2.1.0",
   "publisher": "wilsonch001",
   "engines": {
     "vscode": "^1.85.0"
@@ -12,44 +12,34 @@
   ],
   "icon": "images/icon.png",
   "activationEvents": [
-    "onCommand:sv-statemachine.generate",
+    "onCommand:sv-statemachine.generate-fast",
     "onCommand:sv-statemachine.generate-advanced"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "sv-statemachine.generate",
+        "command": "sv-statemachine.generate-fast",
         "title": "Generate Fast State Machine",
-        "category": "SystemVerilog"
+        "category": "SystemVerilog",
+        "description": "Generate a state machine with sequential state transitions"
       },
       {
         "command": "sv-statemachine.generate-advanced",
         "title": "Generate Advanced State Machine",
-        "category": "SystemVerilog"
+        "category": "SystemVerilog",
+        "description": "Generate a state machine with custom state transitions"
       }
     ],
     "menus": {
-      "editor/context": [
+      "commandPalette": [
         {
-          "command": "sv-statemachine.generate",
-          "group": "SV Generation",
+          "command": "sv-statemachine.generate-fast",
           "when": "editorLangId == systemverilog"
         },
         {
           "command": "sv-statemachine.generate-advanced",
-          "group": "SV Generation",
           "when": "editorLangId == systemverilog"
-        }
-      ],
-      "explorer/context": [
-        {
-          "command": "sv-statemachine.generate",
-          "group": "SV Generation"
-        },
-        {
-          "command": "sv-statemachine.generate-advanced",
-          "group": "SV Generation"
         }
       ]
     }
